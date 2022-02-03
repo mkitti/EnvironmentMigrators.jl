@@ -2,12 +2,13 @@
 Welcome to EnvironmentMigrators.jl.
 
 Use `EnvironmentMigrators.wizard()` for interactive use.
+
 See also the following functions which are not exported.
-* list_shared_environments
-* select_shared_environments
-* backup_current_environment
-* migrate_selected_environment
-* wizard
+* `list_shared_environments([depot])`
+* `select_shared_environments([depot])`
+* `backup_current_environment(; fileaction = cp)`
+* `migrate_selected_environment(selected_environment; backup = true)`
+* `wizard([depot])`
 """
 module EnvironmentMigrators
 
@@ -24,6 +25,12 @@ function list_shared_environments(depot = first(DEPOT_PATH))
     readdir(joinpath(depot, "environments"))
 end
 
+"""
+    select_shared_environments([depot])
+
+Present an interactive menu to select a shared environment to copy from.
+Also provide options to select the current enviornment for backup or quit.
+"""
 function select_shared_environments(depot = first(DEPOT_PATH))
     envs = list_shared_environments()
     options = copy(envs)
