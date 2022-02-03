@@ -19,7 +19,8 @@ using Dates
 """
     list_shared_environments([depot])
 
-List the top level shared environments in $(joinpath(DEPOT_PATH[1], "environments"))
+List the top level shared environments in $(joinpath(DEPOT_PATH[1], "environments")).
+`depot` defaults to `first(DEPOT_PATH)`.
 """
 function list_shared_environments(depot = first(DEPOT_PATH))
     readdir(joinpath(depot, "environments"))
@@ -30,6 +31,7 @@ end
 
 Present an interactive menu to select a shared environment to copy from.
 Also provide options to select the current enviornment for backup or quit.
+`depot` defaults to `first(DEPOT_PATH)`.
 """
 function select_shared_environments(depot = first(DEPOT_PATH))
     envs = list_shared_environments()
@@ -56,13 +58,14 @@ function select_shared_environments(depot = first(DEPOT_PATH))
 end
 
 """
-    backup_currernt_environments([depot]; fileaction=cp)
+    backup_current_environments([depot]; fileaction=cp)
 
 Backup the Project.toml and Manifest.toml to `backups/timestamp` where
 `timestamp = Dates.format(Dates.now(), "yyyy-mm-dd_HH_MM_SS")``.
 
 `fileaction` is a keyword parameter for a function that accepts two parameters.
 `fileaction` defaults to `cp` for copy. An alternative is `mv` for move.
+`depot` defaults to `first(DEPOT_PATH)`.
 """
 function backup_current_environment(; fileaction=cp)
     @info "Current environment:"
@@ -97,6 +100,8 @@ end
 
 Migrate the selected environment specified as a directory in selected_env to
 the current active project.
+
+`selected_env` should be the absolute path to an environment _directory_.
 """
 function migrate_selected_environment(selected_env; backup = true)
     if backup
@@ -145,6 +150,8 @@ end
     wizard([depot])
 
 Run an interactive terminal based wizard.
+
+`depot` defaults to `first(DEPOT_PATH)`.
 """
 function wizard(depot = first(DEPOT_PATH))
     selected_env = select_shared_environments(depot)
@@ -157,7 +164,7 @@ function wizard(depot = first(DEPOT_PATH))
     else
         mv
     end
-    backup_current_environment(; fileaction)
+    backup_current_environment(; fileaction=fileaction)
     if selected_env != Base.active_project()
         migrate_selected_environment(selected_env; backup = false)
     end

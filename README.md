@@ -157,3 +157,9 @@ julia> Pkg.resolve()
 julia> Pkg.instantiate()
 
 ```
+
+# Getting Help
+
+Migrating environments can present unexpected challenges.
+For further help, see the [Pkg.jl documentation](https://pkgdocs.julialang.org/v1/).
+For community assistance, see https://julialang.org/community/
