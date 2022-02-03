@@ -23,7 +23,12 @@ List the top level shared environments in $(joinpath(DEPOT_PATH[1], "environment
 `depot` defaults to `first(DEPOT_PATH)`.
 """
 function list_shared_environments(depot = first(DEPOT_PATH))
-    readdir(joinpath(depot, "environments"))
+    shared_environments = joinpath(depot, "environments")
+    if !isdir(shared_environments)
+        return String[]
+    else
+        return readdir(shared_environments)
+    end
 end
 
 """
