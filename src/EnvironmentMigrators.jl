@@ -16,6 +16,8 @@ using Pkg
 using REPL.TerminalMenus
 using Dates
 
+Pkg.add("REPL")
+
 """
     list_shared_environments([depot])
 
