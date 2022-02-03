@@ -92,7 +92,7 @@ function backup_current_environment(; fileaction=cp)
     else
         @info "No existing Project.toml or Manifest.toml to backup" current_env_project_toml current_env_manifest_toml
     end
-    nothing
+    return nothing
 end
 
 """
@@ -104,6 +104,10 @@ the current active project.
 `selected_env` should be the absolute path to an environment _directory_.
 """
 function migrate_selected_environment(selected_env; backup = true)
+    if !isdir(selected_env) && isfile(selected_env) && endswith(selected_env, "Project.toml")
+        selected_env = dirname(selected_env)
+    end
+
     if backup
         @info "Backing up the current environment" selected_env
         backup_current_environment(; fileaction=mv)
@@ -144,6 +148,7 @@ function migrate_selected_environment(selected_env; backup = true)
     end
     @info "Migration successful"
     Pkg.status()
+    return nothing
 end
 
 """
