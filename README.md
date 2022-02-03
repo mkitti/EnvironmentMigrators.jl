@@ -2,7 +2,10 @@
 
 [![Build Status](https://github.com/mkitti/EnvironmentMigrators.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/mkitti/EnvironmentMigrators.jl/actions/workflows/CI.yml?query=branch%3Amain)
 
-This package is to facilitate the copying of Julia shared environments, particularly between versions, as well as backing up of the current environment.
+This package facilitates the copying of Julia shared environments, particularly between versions, as well as backing up of the current environment.
+
+Specifically these utilities are meant to facilitate the copying of top-level shared environments to another environment. For example, this can
+help copy a `v1.6` environment to a `v1.7` environment.
 
 # Installation
 
@@ -65,6 +68,37 @@ Pkg.add(\"EnvironmentMigrators\")
 using EnvironmentMigrators
 EnvironmentMigrators.migrate_selected_environment(joinpath(DEPOT_PATH[1], \"environments\", \"v1.6\"))
 '
+```
+
+# Backup the current environment
+
+```julia
+julia> using EnvironmentMigrators
+
+julia> EnvironmentMigrators.backup_current_environment()
+[ Info: Current environment:
+      Status `C:\Users\kittisopikulm\.julia\environments\v1.8\Project.toml`
+  [6e4b80f9] BenchmarkTools v1.2.1
+  [5ba52731] CodecLz4 v0.4.0
+  [e51d7f76] EnvironmentMigrators v0.1.0 `C:\Users\kittisopikulm\.julia\dev\EnvironmentMigrators`
+  [5752ebe1] GMT v0.35.0
+  [28b8d3ca] GR v0.57.4
+  [f67ccb44] HDF5 v0.16.1 `C:\Users\kittisopikulm\.julia\dev\HDF5`
+  [23992714] MAT v0.10.1 `C:\Users\kittisopikulm\.julia\dev\MAT`
+  [14b8a8f1] PkgTemplates v0.7.26
+  [91a5bcdd] Plots v1.15.2
+  [c46f51b8] ProfileView v0.6.11
+  [295af30f] Revise v3.1.11
+  [a91e544d] SymmetricFormats v0.1.0 `C:\Users\kittisopikulm\.julia\dev\SymmetricFormats`
+  [c28d94ed] UInt12Arrays v0.2.0 `C:\Users\kittisopikulm\.julia\dev\UInt12Arrays`
+  [1986cc42] Unitful v1.6.0
+  [d2c73de3] GR_jll v0.57.2+0
+  [9166e923] ImarisWriter_jll v0.0.1+0
+  [ea2cea3b] Qt5Base_jll v5.15.2+0 `C:\Users\kittisopikulm\.julia\dev\Qt5Base_jll`
+┌ Info: Backing up Project.toml and Manifest.toml
+│   current_env_project_toml = "C:\\Users\\kittisopikulm\\.julia\\environments\\v1.8\\Project.toml"
+│   current_env_manifest_toml = "C:\\Users\\kittisopikulm\\.julia\\environments\\v1.8\\Manifest.toml"
+└   backup_dir = "C:\\Users\\kittisopikulm\\.julia\\environments\\v1.8\\backups\\2022-02-03_17_41_24"
 ```
 
 # Manually moving environments without this package
