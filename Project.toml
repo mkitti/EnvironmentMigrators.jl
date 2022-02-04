@@ -1,7 +1,7 @@
 name = "EnvironmentMigrators"
 uuid = "e51d7f76-d3fb-4251-851d-1e49b8315b3e"
 authors = ["Mark Kittisopikul <kittisopikulm@janelia.hhmi.org> and contributors"]
-version = "0.2.0"
+version = "0.2.1"
 
 [deps]
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"

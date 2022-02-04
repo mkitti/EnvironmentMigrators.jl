@@ -1,5 +1,71 @@
+"""
+    get_current_project_and_manifest()
+
+Return the current project and manifest TOML files.
+
+# Implementation details
+
+* `Base.active_project()` is used to determine the location the current (Julia)Project.toml
+* JuliaManifest.toml takes precedent over Manifest.toml in the same directory as the Project.toml 
+"""
+function get_current_project_and_manifest()
+    project_toml = Base.active_project()
+    julia_manifest_toml = joinpath(dirname(project_toml), "JuliaManifest.toml")
+    if isfile(julia_manifest_toml)
+        manifest_toml = julia_manifest_toml
+    else
+        manifest_toml = joinpath(dirname(project_toml), "Manifest.toml")
+    end
+    project_toml, manifest_toml
+end
+
+"""
+    AbstractEnvironmentMigrator
+
+Base abstract type for EnvironmentMigrators.
+
+# Interface:
+* `source_project_toml(m::AbstractEnvironmentMigrator)`
+    - return path of (Julia)Project.toml to copy from or `nothing` if there is no source
+* `source_manifest_toml(m::AbstractEnvironmentMigrator)`
+    - return path of (Julia)Manifest.toml to copy from or `nothing` if there is no source
+* `target_project_toml(m::AbstractEnvironmentMigrator)`
+    - return path of (Julia)Project.toml to backup and to which to copy
+* `target_manifest_toml(m::AbstractEnvironmentMigrator)`
+    - return path of (Julia)Manifest.toml to backup and to which to copy
+* `fileaction(m::AbstractEnvironmentMigrator)`
+    - action to take during backup operations
+* `backup(m::AbstractEnvironmentMigrator)`
+    - save a copy of the target environment in a timestamped subfolder
+* `migrate(m::AbstractEnvironmentMigrator; backup = true, update = true)`
+    - migrate project and manifest files from source to target
+
+# Subtypes:
+* `SimpleEnvironmentMigrator`
+    - set source and target project and manifest files as fields
+* `SimpleBackupOnlyEnvironmentMigrator`
+    - set target project and manifest files as fields
+"""
 abstract type AbstractEnvironmentMigrator end;
 
+"""
+    SimpleEnvironmentMigrator([source_project_toml, source_target_toml], [target_project_toml, target_manifest_toml])
+
+An `AbstractEnvironmentMigrator` where one can set source and target project and manifest files as fields.
+If `source_project_toml` and `source_manifest_toml` are not specified, they will be `nothing`.
+If `target_project_toml` and `target_manifest_toml` are not specified, they will be set to the current environment.
+
+# Fields
+
+* `source_project_toml`
+* `source_manifest_toml`
+* `target_project_toml`
+* `target_manifest_toml`
+
+# Method details
+
+`fileaction(m)` will return `cp` if `source_project_toml` is `nothing` or `mv` otherwise.
+"""
 mutable struct SimpleEnvironmentMigrator <: AbstractEnvironmentMigrator
     source_project_toml::Union{AbstractString, Nothing}
     source_manifest_toml::Union{AbstractString, Nothing}
@@ -7,8 +73,7 @@ mutable struct SimpleEnvironmentMigrator <: AbstractEnvironmentMigrator
     target_manifest_toml::AbstractString
 end
 function SimpleEnvironmentMigrator(source_project_toml, source_manifest_toml)
-    project_toml = Base.active_project()
-    manifest_toml = joinpath(dirname(project_toml), "Manifest.toml")
+    project_toml, manifest_toml = get_current_project_and_manifest()
     SimpleEnvironmentMigrator(source_project_toml, source_manifest_toml, project_toml, manifest_toml)
 end
 SimpleEnvironmentMigrator() = SimpleEnvironmentMigrator(nothing, nothing)
@@ -18,6 +83,12 @@ target_project_toml(m::SimpleEnvironmentMigrator) = m.target_project_toml
 target_manifest_toml(m::SimpleEnvironmentMigrator) = m.target_manifest_toml
 fileaction(m::SimpleEnvironmentMigrator) = m.source_project_toml === nothing ? cp : mv
 
+"""
+    SimpleBackupOnlyEnvironmentMigrator{F}([target_project_toml, target_manifest_toml], fileaction::F)
+
+`AbstractEnvironmentMigrator` only for backing up the target project and manifest tomls to a timestamped folder.
+The target project and manifest tomls will default to the current project and manifest tomls.
+"""
 mutable struct SimpleBackupOnlyEnvironmentMigrator{F} <: AbstractEnvironmentMigrator
     target_project_toml::AbstractString
     target_manifest_toml::AbstractString
@@ -37,6 +108,21 @@ target_project_toml(m::SimpleBackupOnlyEnvironmentMigrator) = m.target_project_t
 target_manifest_toml(m::SimpleBackupOnlyEnvironmentMigrator) = m.target_manifest_toml
 fileaction(m::SimpleBackupOnlyEnvironmentMigrator{F}) where F = m.fileaction
 
+"""
+    backup(m::AbstractEnvironmentMigrator)
+
+Backup an environment. Typically, this involves copying the Project.toml and Manifest.toml
+to a time-stamped backup subfolder.
+
+# Extended Help
+
+The standard backup procedure is as follows.
+1. Check that the target project and manifest TOMLs are in the same directory.
+2. Check that one of either the project or manifest TOMLs exist
+3. Create a time stamp in the format "yyyy-mm-dd_HH_MM_SS
+4. Create a subpath in the same directory as the project TOML called `backups/[timestamp]`
+5. Copy (or move) the project and manifest TOMLs to the backup path if they exist.
+"""
 function backup(m::AbstractEnvironmentMigrator)
     @assert dirname(target_project_toml(m)) == dirname(target_manifest_toml(m))
     current_dir = dirname(target_project_toml(m))
@@ -46,15 +132,12 @@ function backup(m::AbstractEnvironmentMigrator)
         mkpath(backup_dir)
         @info "Backing up Project.toml and Manifest.toml" target_project_toml(m) target_manifest_toml(m) backup_dir
         _fileaction = fileaction(m)
-        if isfile(target_project_toml(m))
-            _fileaction(target_project_toml(m), joinpath(backup_dir, "Project.toml"))
-        else
-            @info "Project.toml does not exist" target_project_toml(m)
-        end
-        if isfile(target_manifest_toml(m))
-            _fileaction(target_manifest_toml(m), joinpath(backup_dir, "Manifest.toml"))
-        else
-            @info "Manifest.toml does not exist" target_manifest_toml(m)
+        for toml in (target_project_toml(m), target_manifest_toml(m))
+            if isfile(toml)
+                _fileaction(toml, joinpath(backup_dir, basename(toml)))
+            else
+                @info "$toml does not exist" toml
+            end
         end
     else
         @info "No existing Project.toml or Manifest.toml to backup" target_project_toml(m) target_manifest_toml(m)
@@ -64,7 +147,29 @@ end
 
 const SimpleEnvironmentMigrators = Union{SimpleEnvironmentMigrator, SimpleBackupOnlyEnvironmentMigrator}
 
-function migrate(m::SimpleEnvironmentMigrators; backup = true)
+"""
+    migrate(m::AbstractEnvironmentMigrator; backup = true, update = true)
+
+Move an environment from one place to another.
+`backup` - whether to perform a backup of the target environment (`true`) or not (`false`).
+`update` - whether to perform an update of the source environment (`true`) or not (`false`).
+
+# Extended Help
+
+The typical migration procedure is as follows.
+
+1. Backup the target environment by moving the files if indicated.
+2. Copy the (Julia)Project.toml from the source to the target environment.
+3. Copy the (Julia)Manifest.toml from the source to the target environment.
+4. Activate the target environment
+5. `Pkg.status()`
+6. `Pkg.upgrade_manifest()` - skip if error
+7. `Pkg.resolve()`
+8. `Pkg.instantiate()`
+9. `Pkg.status()`
+10. `Pkg.update()`
+"""
+function migrate(m::SimpleEnvironmentMigrators; backup = true, update = true)
     if backup
         @info "Backing up the current environment" m
         EnvironmentMigrators.backup(m)
@@ -119,8 +224,10 @@ function migrate(m::SimpleEnvironmentMigrators; backup = true)
     end
     @info "Migration successful"
     Pkg.status()
-    @info "Updating"
-    Pkg.update()
+    if update
+        @info "Updating"
+        Pkg.update()
+    end
     @info "Migration complete and environment updated. Have a nice day!" _target_project_toml
     return nothing
 end

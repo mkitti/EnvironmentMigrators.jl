@@ -3,14 +3,29 @@ Welcome to EnvironmentMigrators.jl.
 
 Use `EnvironmentMigrators.wizard()` for interactive use.
 
-See also the following functions which are not exported.
+# High level interface (unexported)
 * `list_shared_environments([depot])`
 * `select_shared_environments([depot])`
 * `backup_current_environment(; fileaction = cp)`
 * `migrate_selected_environment(selected_environment; backup = true)`
+* `migrate_current_environment_to(path)`
 * `wizard([depot])`
+
+# Exported types
+* `SimpleEnvironmentMigrator`
+* `SimpleBackupOnlyEnvironmentMigrator`
+
+# Exported methods
+* `migrate(m::EnvironmentMigrators.AbstractEnvironmentMigrator)`
+* `backup(m::EnvironmentMigrators.AbstractEnvironmentMigrator)`
 """
 module EnvironmentMigrators
+
+# https://github.com/JuliaLang/julia/pull/34896
+@static if isdefined(Base, :Experimental) &&
+           isdefined(Base.Experimental, Symbol("@optlevel"))
+    Base.Experimental.@optlevel 1
+end
 
 using Pkg
 using REPL.TerminalMenus
@@ -98,9 +113,17 @@ function migrate_selected_environment(selected_env; backup = true)
         selected_env = dirname(selected_env)
     end
     selected_project_toml = joinpath(selected_env, "Project.toml")
+    selected_julia_project_toml = joinpath(selected_env, "JuliaProject.toml")
+    if isfile(selected_julia_project_toml)
+        selected_project_toml = selected_julia_project_toml
+    end
     selected_manifest_toml = joinpath(selected_env, "Manifest.toml")
+    selected_julia_manifest_toml = joinpath(selected_env, "JuliaManifest.toml")
+    if isfile(selected_julia_manifest_toml)
+        selected_manifest_toml = selected_julia_manifest_toml
+    end
     m = SimpleEnvironmentMigrator(selected_project_toml, selected_manifest_toml)
-    migrate(m)
+    migrate(m; backup = backup)
     return nothing
 end
 
@@ -127,6 +150,20 @@ function wizard(depot = first(DEPOT_PATH))
         migrate_selected_environment(selected_env; backup = false)
     end
     return nothing
+end
+
+"""
+    migrate_current_environment_to(path::AbstractString)
+
+Migrate the current environment to the indicated path.
+"""
+function migrate_current_environment_to(path::AbstractString; update = false)
+    mkpath(path)
+    source_project_toml, source_manifest_toml = get_current_project_and_manifest()
+    target_project_toml, target_manifest_toml = joinpath.(path, basename.((source_project_toml, source_manifest_toml)))
+    m = SimpleEnvironmentMigrator(source_project_toml, source_manifest_toml,
+                                  target_project_toml, target_manifest_toml)
+    migrate(m; update = update)
 end
 
 function __init__()
