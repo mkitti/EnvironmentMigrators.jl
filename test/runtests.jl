@@ -2,8 +2,6 @@ using EnvironmentMigrators
 using Test
 using Pkg
 
-Pkg.add("Libdl")
-
 @testset "EnvironmentMigrators.jl" begin
     Pkg.activate(mktempdir())
     Pkg.add("REPL")

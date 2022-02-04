@@ -16,6 +16,11 @@ using Pkg
 using REPL.TerminalMenus
 using Dates
 
+export SimpleEnvironmentMigrator, SimpleBackupOnlyEnvironmentMigrator
+export migrate, backup
+
+include("types.jl")
+
 """
     list_shared_environments([depot])
 
@@ -74,30 +79,10 @@ Backup the Project.toml and Manifest.toml to `backups/timestamp` where
 """
 function backup_current_environment(; fileaction=cp)
     @info "Current environment:"
+    m = SimpleBackupOnlyEnvironmentMigrator(fileaction)
+    Pkg.activate(m.target_project_toml)
     Pkg.status()
-    current_env_project_toml = Base.active_project()
-    current_dir = dirname(current_env_project_toml)
-    current_env_manifest_toml = joinpath(current_dir, "Manifest.toml")
-    mkpath(current_dir)
-    if isfile(current_env_project_toml) || isfile(current_env_manifest_toml)
-        timestamp = Dates.format(Dates.now(), "yyyy-mm-dd_HH_MM_SS")
-        backup_dir = joinpath(current_dir, "backups", timestamp)
-        mkpath(backup_dir)
-        @info "Backing up Project.toml and Manifest.toml" current_env_project_toml current_env_manifest_toml backup_dir
-        if isfile(current_env_project_toml)
-            fileaction(current_env_project_toml, joinpath(backup_dir, "Project.toml"))
-        else
-            @info "Project.toml does not exist" current_env_project_toml
-        end
-        if isfile(current_env_manifest_toml)
-            fileaction(current_env_manifest_toml, joinpath(backup_dir, "Manifest.toml"))
-        else
-            @info "Manifest.toml does not exist" current_env_manifest_toml
-        end
-    else
-        @info "No existing Project.toml or Manifest.toml to backup" current_env_project_toml current_env_manifest_toml
-    end
-    return nothing
+    backup(m)
 end
 
 """
@@ -112,47 +97,10 @@ function migrate_selected_environment(selected_env; backup = true)
     if !isdir(selected_env) && isfile(selected_env) && endswith(selected_env, "Project.toml")
         selected_env = dirname(selected_env)
     end
-
-    if backup
-        @info "Backing up the current environment" selected_env
-        backup_current_environment(; fileaction=mv)
-    end
-
     selected_project_toml = joinpath(selected_env, "Project.toml")
     selected_manifest_toml = joinpath(selected_env, "Manifest.toml")
-    current_env = dirname(Base.active_project())
-    if isfile(selected_project_toml)
-        @info "Copying selected Project.toml to current environment" selected_project_toml current_env
-        cp(selected_project_toml, joinpath(current_env, "Project.toml"))
-    else
-        @info "Selected Project.toml does not exist" selected_project_toml
-    end
-    if isfile(selected_manifest_toml)
-        #@info "Copying selected Manifest.toml to current directory"
-        #cp(selected_project_toml, joinpath(current_env, "Manifest.toml"))
-    else
-        @info "Selected Manifest.toml does not exist" selected_manifest_toml
-    end
-    try
-        Pkg.status()
-        Pkg.resolve()
-        try
-            Pkg.instantiate()
-        catch err
-            @error "An error occurred during Pkg.resolve()." err
-            @info "Run `using Pkg; pkg\"instantiate\"` to view the error."
-            @info "Run `using Pkg; rm\"PkgName\"` to remove problematic packages."
-            return nothing
-        end
-    catch err
-        @error "An error occurred during Pkg.resolve()." err
-        @info "Run `using Pkg; Pkg.resolve()` to view the error."
-        @info "Run `using Pkg; rm\"PkgName\"` to remove problematic packages."
-        @info "Run `using Pkg; Pkg.instantiate()` afterwards."
-        return nothing
-    end
-    @info "Migration successful"
-    Pkg.status()
+    m = SimpleEnvironmentMigrator(selected_project_toml, selected_manifest_toml)
+    migrate(m)
     return nothing
 end
 
