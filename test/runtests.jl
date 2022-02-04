@@ -25,7 +25,7 @@ end
     @test backup_dir |> readdir |> !isempty
     timestamp_dir = backup_dir |> readdir |> first |> x->joinpath(backup_dir, x)
     @test timestamp_dir |> readdir |> !isempty
-    timetstamp_dir_contents = timestamp_dir |> readdir |> x->filter(endswith("toml"), x)
+    timetstamp_dir_contents = timestamp_dir |> readdir |> x->filter(s->endswith(s, "toml"), x)
     @test "Project.toml" in timetstamp_dir_contents
     @test "Manifest.toml" in timetstamp_dir_contents
     sleep(2)
@@ -49,6 +49,6 @@ end
     Pkg.activate(t)
     @test EnvironmentMigrators.migrate_selected_environment(t; backup = true) === nothing
     backup_files = collect_files(joinpath(t, "backups"))
-    @test backup_files |> x->filter(endswith("JuliaProject.toml"), x) |> !isempty
-    @test backup_files |> x->filter(endswith("JuliaManifest.toml"), x) |> !isempty
+    @test backup_files |> x->filter(s->endswith(s, "JuliaProject.toml"), x) |> !isempty
+    @test backup_files |> x->filter(s->endswith(s, "JuliaManifest.toml"), x) |> !isempty
 end
