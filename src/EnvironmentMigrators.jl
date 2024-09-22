@@ -47,7 +47,8 @@ function list_shared_environments(depot = first(DEPOT_PATH))
     if !isdir(shared_environments)
         return String[]
     else
-        return readdir(shared_environments)
+        sh_envs = readdir(shared_environments)
+        return [s for s in sh_envs if isdir(joinpath(shared_environments, s))]
     end
 end
 
