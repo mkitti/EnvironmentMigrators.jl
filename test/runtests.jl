@@ -35,14 +35,17 @@ end
     @test EnvironmentMigrators.migrate_selected_environment(t; backup = true) === nothing
     t = mktempdir()
     @test EnvironmentMigrators.migrate_selected_environment(t; backup = false) === nothing
+    sleep(2)
     t = mktempdir()
     touch(joinpath(t, "Project.toml"))
     touch(joinpath(t, "Manifest.toml"))
     @test EnvironmentMigrators.migrate_selected_environment(t; backup = true) === nothing
+    sleep(2)
     t = mktempdir()
     touch(joinpath(t, "JuliaProject.toml"))
     touch(joinpath(t, "JuliaManifest.toml"))
     @test EnvironmentMigrators.migrate_selected_environment(t; backup = true) === nothing
+    sleep(2)
     t = mktempdir()
     touch(joinpath(t, "JuliaProject.toml"))
     touch(joinpath(t, "JuliaManifest.toml"))
